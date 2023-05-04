@@ -7,7 +7,6 @@ import 'dart:typed_data' show Uint8List;
 import 'package:cross_file/cross_file.dart' show XFile;
 import "package:path/path.dart" as p;
 
-import 'utils.dart';
 import 'exceptions.dart';
 
 extension HttpUtils on http.Client {
@@ -30,10 +29,7 @@ extension HttpUtils on http.Client {
     Uri uploadUrl, {
     Map<String, String>? headers,
   }) async {
-    final offsetHeaders = Map<String, String>.from(headers ?? {})
-      ..addAll({
-        "Tus-Resumable": tusVersion,
-      });
+    final offsetHeaders = Map<String, String>.from(headers ?? {});
     final response = await head(
       uploadUrl,
       headers: offsetHeaders,

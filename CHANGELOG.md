@@ -1,5 +1,9 @@
 ## 0.0.11
 
+Added ability to setup uploading files with custom url scheme.
+
+## 0.0.11
+
 Fixed handling losing internet connection exception.
 
 ## 0.0.10

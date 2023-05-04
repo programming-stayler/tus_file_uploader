@@ -11,14 +11,16 @@ import 'extensions.dart';
 
 class TusFileUploader {
   static const _defaultChunkSize = 128 * 1024; // 128 KB
-  late int _currentChunkSize;
   final _client = http.Client();
 
   Uri? _uploadUrl;
+  String? customScheme;
+  CancelableOperation? _currentOperation;
+
   late XFile _file;
   late Duration _timeout;
+  late int _currentChunkSize;
   late int _optimalChunkSendTime;
-  CancelableOperation? _currentOperation;
 
   final UploadingProgressCallback? progressCallback;
   final UploadingCompleteCallback? completeCallback;
@@ -152,6 +154,7 @@ class TusFileUploader {
         await _uploadNextChunk(
           offset: offset,
           totalBytes: totalBytes,
+          headers: headers,
         );
       } on MissingUploadOffsetException catch (_) {
         final uploadUrl = await setupUploadUrl();
@@ -182,6 +185,7 @@ class TusFileUploader {
   Future<void> _uploadNextChunk({
     required int offset,
     required int totalBytes,
+    Map<String, String> headers = const {},
   }) async {
     final resultUrl = _uploadUrl;
     if (resultUrl == null) {
@@ -191,18 +195,21 @@ class TusFileUploader {
     final bytesRead = min(_currentChunkSize, byteBuilder.length);
     final nextChunk = byteBuilder.takeBytes();
     final startTime = DateTime.now();
-    final serverOffset = await _client.uploadNextChunkOfFile(
-      uploadUrl: resultUrl,
-      nextChunk: nextChunk,
-      headers: {
-        "Tus-Resumable": tusVersion,
-        "Upload-Offset": "$offset",
-        "Content-Type": "application/offset+octet-stream"
-      },
-    ).timeout(
-      _timeout,
-      onTimeout: () => offset,
-    );
+    final serverOffset = await _client
+        .uploadNextChunkOfFile(
+          uploadUrl: resultUrl,
+          nextChunk: nextChunk,
+          headers: Map.from(headers)
+            ..addAll({
+              "Tus-Resumable": tusVersion,
+              "Upload-Offset": "$offset",
+              "Content-Type": "application/offset+octet-stream"
+            }),
+        )
+        .timeout(
+          _timeout,
+          onTimeout: () => offset,
+        );
     final endTime = DateTime.now();
     final diff = endTime.difference(startTime);
     _currentChunkSize = (_currentChunkSize * (_optimalChunkSendTime / diff.inMilliseconds)).toInt();

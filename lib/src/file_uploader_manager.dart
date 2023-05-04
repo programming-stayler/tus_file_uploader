@@ -16,9 +16,11 @@ class TusFileUploaderManager {
 
   Future<void> uploadFile({
     required String localFilePath,
+    String? customScheme,
     UploadingProgressCallback? progressCallback,
     UploadingCompleteCallback? completeCallback,
     UploadingFailedCallback? failureCallback,
+    Map<String, String> metadata = const {},
     Map<String, String> headers = const {},
     bool failOnLostConnection = false,
   }) async {
@@ -27,7 +29,7 @@ class TusFileUploaderManager {
     String? uploadUrl;
     if (uploader == null) {
       final totalBytes = await xFile.length();
-      final uploadMetadata = xFile.generateMetadata();
+      final uploadMetadata = xFile.generateMetadata(originalMetadata: metadata);
       final resultHeaders = Map<String, String>.from(headers)
         ..addAll({
           "Tus-Resumable": tusVersion,
@@ -36,7 +38,7 @@ class TusFileUploaderManager {
         });
       uploader = TusFileUploader.init(
         path: localFilePath,
-        baseUrl: Uri.parse(baseUrl),
+        baseUrl: Uri.parse(baseUrl + (customScheme ?? '')),
         headers: resultHeaders,
         timeout: timeout,
         failOnLostConnection: failOnLostConnection,
