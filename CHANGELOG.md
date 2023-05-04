@@ -1,4 +1,4 @@
-## 0.0.11
+## 0.0.12
 
 Added ability to setup uploading files with custom url scheme.
 
