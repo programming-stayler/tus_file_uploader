@@ -231,6 +231,7 @@ class TusFileUploader {
       await _uploadNextChunk(
         offset: nextOffset,
         totalBytes: totalBytes,
+        headers: headers,
       );
     }
   }

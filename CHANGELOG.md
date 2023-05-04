@@ -1,3 +1,7 @@
+## 0.0.13
+
+Fixed passing headers to recursive chunks uploading.
+
 ## 0.0.12
 
 Added ability to setup uploading files with custom url scheme.
