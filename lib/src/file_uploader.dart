@@ -10,7 +10,9 @@ import 'exceptions.dart';
 import 'extensions.dart';
 
 class TusFileUploader {
-  static const _defaultChunkSize = 128 * 1024; // 128 KB
+  static const _kb = 1024; // ! KB
+  static const _defaultChunkSize = 128 * _kb; // 128 KB
+  static const _minChunkSize = 1 * _kb;
   final _client = http.Client();
 
   Uri? _uploadUrl;
@@ -212,7 +214,8 @@ class TusFileUploader {
         );
     final endTime = DateTime.now();
     final diff = endTime.difference(startTime);
-    _currentChunkSize = (_currentChunkSize * (_optimalChunkSendTime / diff.inMilliseconds)).toInt();
+    final potential = (_currentChunkSize * (_optimalChunkSendTime / diff.inMilliseconds)).toInt();
+    _currentChunkSize = max(potential, _minChunkSize);
     final nextOffset = offset + bytesRead;
     if (nextOffset != serverOffset) {
       throw MissingUploadOffsetException(

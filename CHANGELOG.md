@@ -1,3 +1,7 @@
+## 0.0.14
+
+Fixed stucking when current chuck size equals zero.
+
 ## 0.0.13
 
 Fixed passing headers to recursive chunks uploading.
