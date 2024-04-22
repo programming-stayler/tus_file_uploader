@@ -1,4 +1,3 @@
-
 class ProtocolException implements Exception {
   final int statusCode;
 
@@ -31,4 +30,15 @@ class MissingUploadUriException implements Exception {
   @override
   String toString() =>
       'MissingUploadUriException: missing upload Uri in response for creating upload';
+}
+
+class UnauthorizedException implements Exception {
+  final String? message;
+
+  UnauthorizedException({
+    this.message,
+  });
+
+  @override
+  String toString() => 'UnauthorizedException: ${message ?? "Failed to authorize"}';
 }

@@ -1,10 +1,10 @@
 name: tus_file_uploader
 description: Dart implementation of tus protocol for Flutter. Allows to pause/resume files uploading.
-version: 0.0.14
+version: 0.0.15
 homepage: https://github.com/programming-stayler/tus_file_uploader.git
 
 environment:
-  sdk: '>=2.18.4 <3.0.0'
+  sdk: '>=3.0.0 <4.0.0'
   flutter: ">=1.17.0"
 
 dependencies:
@@ -16,6 +16,7 @@ dependencies:
   async: ^2.9.0
   path: ^1.8.2
   collection: ^1.17.0
+  logger: ^2.2.0
 
 dev_dependencies:
   flutter_test:

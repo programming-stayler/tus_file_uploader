@@ -20,6 +20,7 @@ class TusFileUploaderManager {
     UploadingProgressCallback? progressCallback,
     UploadingCompleteCallback? completeCallback,
     UploadingFailedCallback? failureCallback,
+    UploadingFailedCallback? authCallback,
     Map<String, String> metadata = const {},
     Map<String, String> headers = const {},
     bool failOnLostConnection = false,
@@ -51,6 +52,10 @@ class TusFileUploaderManager {
           failureCallback?.call(filePath, message);
           _removeFileWithPath(localFilePath);
         },
+        authCallback: (filePath, message) async {
+          authCallback?.call(filePath, message);
+          _removeFileWithPath(localFilePath);
+        }
       );
       _cache[localFilePath] = uploader;
       uploadUrl = await uploader.setupUploadUrl();

@@ -1,3 +1,7 @@
+## 0.0.15
+
+Added logging. Implemented handling 401 error
+
 ## 0.0.14
 
 Fixed stucking when current chuck size equals zero.

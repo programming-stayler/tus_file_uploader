@@ -4,6 +4,7 @@ import 'package:async/async.dart';
 
 import 'package:cross_file/cross_file.dart' show XFile;
 import 'package:http/http.dart' as http;
+import 'package:logger/logger.dart';
 
 import 'utils.dart';
 import 'exceptions.dart';
@@ -23,10 +24,12 @@ class TusFileUploader {
   late Duration _timeout;
   late int _currentChunkSize;
   late int _optimalChunkSendTime;
+  late Logger _logger;
 
   final UploadingProgressCallback? progressCallback;
   final UploadingCompleteCallback? completeCallback;
   final UploadingFailedCallback? failureCallback;
+  final UploadingFailedCallback? authCallback;
   final Map<String, String> headers;
   final bool failOnLostConnection;
   final Uri baseUrl;
@@ -41,6 +44,8 @@ class TusFileUploader {
     this.progressCallback,
     this.completeCallback,
     this.failureCallback,
+    this.authCallback,
+    Level loggerLevel = Level.off,
     int? optimalChunkSendTime,
     Uri? uploadUrl,
     int? timeout,
@@ -50,6 +55,10 @@ class TusFileUploader {
     _currentChunkSize = _defaultChunkSize;
     _timeout = Duration(seconds: timeout ?? 3); // 3 SEC
     _optimalChunkSendTime = optimalChunkSendTime ?? 1000; // 1 SEC
+    _logger = Logger(level: loggerLevel);
+    _logger.d(
+      "INIT FILE UPLOADER\n=> File path: $path\n=> Upload url: $uploadUrl\n=> Timeout: $_timeout\n=> OCHST: $_optimalChunkSendTime\n=> Headers: $headers",
+    );
   }
 
   factory TusFileUploader.init({
@@ -58,6 +67,7 @@ class TusFileUploader {
     UploadingProgressCallback? progressCallback,
     UploadingCompleteCallback? completeCallback,
     UploadingFailedCallback? failureCallback,
+    UploadingFailedCallback? authCallback,
     Map<String, String>? headers,
     bool? failOnLostConnection,
     int? optimalChunkSendTime,
@@ -69,6 +79,7 @@ class TusFileUploader {
         progressCallback: progressCallback,
         completeCallback: completeCallback,
         failureCallback: failureCallback,
+        authCallback: authCallback,
         headers: headers ?? const {},
         failOnLostConnection: failOnLostConnection ?? false,
         optimalChunkSendTime: optimalChunkSendTime,
@@ -82,6 +93,7 @@ class TusFileUploader {
     UploadingProgressCallback? progressCallback,
     UploadingCompleteCallback? completeCallback,
     UploadingFailedCallback? failureCallback,
+    UploadingFailedCallback? authCallback,
     Map<String, String>? headers,
     bool? failOnLostConnection,
     int? optimalChunkSendTime,
@@ -93,6 +105,7 @@ class TusFileUploader {
         progressCallback: progressCallback,
         completeCallback: completeCallback,
         failureCallback: failureCallback,
+        authCallback: authCallback,
         headers: headers ?? const {},
         failOnLostConnection: failOnLostConnection ?? false,
         optimalChunkSendTime: optimalChunkSendTime,
@@ -117,8 +130,16 @@ class TusFileUploader {
             ),
       );
       _uploadUrl = await _currentOperation!.value;
+      _logger.d(
+        "SETUP UPLOAD URL\n=> Url: $_uploadUrl",
+      );
       return _uploadUrl.toString();
+    } on UnauthorizedException catch (e) {
+      _logger.e("$e");
+      await authCallback?.call(_file.path, e.toString());
+      return null;
     } catch (e) {
+      _logger.e("$e");
       await failureCallback?.call(_file.path, e.toString());
       return null;
     }
@@ -152,31 +173,38 @@ class TusFileUploader {
               _timeout,
               onTimeout: () => 0,
             );
+        _logger.d(
+          "GET CURRENT OFFSET\n=> Offset: $offset",
+        );
         final totalBytes = await _file.length();
         await _uploadNextChunk(
           offset: offset,
           totalBytes: totalBytes,
           headers: headers,
         );
-      } on MissingUploadOffsetException catch (_) {
+      } on MissingUploadOffsetException catch (e) {
+        _logger.e("$e");
         final uploadUrl = await setupUploadUrl();
         if (uploadUrl != null) {
           await upload(headers: headers);
         }
         return;
-      } on http.ClientException catch (_) {
+      } on http.ClientException catch (e) {
         // Lost internet connection
+        _logger.e("$e");
         if (failOnLostConnection) {
           await failureCallback?.call(_file.path, e.toString());
         }
         return;
       } on SocketException catch (e) {
         // Lost internet connection
+        _logger.e("$e");
         if (failOnLostConnection) {
           await failureCallback?.call(_file.path, e.toString());
         }
         return;
       } catch (e) {
+        _logger.e("$e");
         await failureCallback?.call(_file.path, e.toString());
         return;
       }
@@ -196,6 +224,9 @@ class TusFileUploader {
     final byteBuilder = await _file.getData(_currentChunkSize, offset: offset);
     final bytesRead = min(_currentChunkSize, byteBuilder.length);
     final nextChunk = byteBuilder.takeBytes();
+    _logger.d(
+      "UPLOADING NEXT FILE CHUNK\n=> Chunk size: ${nextChunk.length}"
+    );
     final startTime = DateTime.now();
     final serverOffset = await _client
         .uploadNextChunkOfFile(
@@ -214,6 +245,9 @@ class TusFileUploader {
         );
     final endTime = DateTime.now();
     final diff = endTime.difference(startTime);
+    _logger.d(
+        "UPLOADING HAS TAKEN\n=> Time: ${diff.inMilliseconds}"
+    );
     final potential = (_currentChunkSize * (_optimalChunkSendTime / diff.inMilliseconds)).toInt();
     _currentChunkSize = max(potential, _minChunkSize);
     final nextOffset = offset + bytesRead;

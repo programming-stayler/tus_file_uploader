@@ -34,7 +34,9 @@ extension HttpUtils on http.Client {
       uploadUrl,
       headers: offsetHeaders,
     );
-
+    if (response.statusCode == 401) {
+      throw UnauthorizedException(message: response.body);
+    }
     if (!(response.statusCode >= 200 && response.statusCode < 300)) {
       throw ProtocolException(response.statusCode);
     }
