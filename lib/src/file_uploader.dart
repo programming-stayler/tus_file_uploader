@@ -41,11 +41,11 @@ class TusFileUploader {
     required this.baseUrl,
     required this.headers,
     required this.failOnLostConnection,
+    required Level loggerLevel,
     this.progressCallback,
     this.completeCallback,
     this.failureCallback,
     this.authCallback,
-    Level loggerLevel = Level.off,
     int? optimalChunkSendTime,
     Uri? uploadUrl,
     int? timeout,
@@ -55,7 +55,12 @@ class TusFileUploader {
     _currentChunkSize = _defaultChunkSize;
     _timeout = Duration(seconds: timeout ?? 3); // 3 SEC
     _optimalChunkSendTime = optimalChunkSendTime ?? 1000; // 1 SEC
-    _logger = Logger(level: loggerLevel);
+    _logger = Logger(
+      level: loggerLevel,
+      printer: PrettyPrinter(
+        methodCount: 0,
+      ),
+    );
     _logger.d(
       "INIT FILE UPLOADER\n=> File path: $path\n=> Upload url: $uploadUrl\n=> Timeout: $_timeout\n=> OCHST: $_optimalChunkSendTime\n=> Headers: $headers",
     );
@@ -72,6 +77,7 @@ class TusFileUploader {
     bool? failOnLostConnection,
     int? optimalChunkSendTime,
     int? timeout,
+    Level loggerLevel = Level.off,
   }) =>
       TusFileUploader._(
         path: path,
@@ -84,6 +90,7 @@ class TusFileUploader {
         failOnLostConnection: failOnLostConnection ?? false,
         optimalChunkSendTime: optimalChunkSendTime,
         timeout: timeout,
+        loggerLevel: loggerLevel,
       );
 
   factory TusFileUploader.initAndSetup({
@@ -98,6 +105,7 @@ class TusFileUploader {
     bool? failOnLostConnection,
     int? optimalChunkSendTime,
     int? timeout,
+    Level loggerLevel = Level.off,
   }) =>
       TusFileUploader._(
         path: path,
@@ -111,6 +119,7 @@ class TusFileUploader {
         optimalChunkSendTime: optimalChunkSendTime,
         uploadUrl: uploadUrl,
         timeout: timeout,
+        loggerLevel: loggerLevel,
       );
 
   Future<String?> setupUploadUrl() async {
@@ -224,9 +233,7 @@ class TusFileUploader {
     final byteBuilder = await _file.getData(_currentChunkSize, offset: offset);
     final bytesRead = min(_currentChunkSize, byteBuilder.length);
     final nextChunk = byteBuilder.takeBytes();
-    _logger.d(
-      "UPLOADING NEXT FILE CHUNK\n=> Chunk size: ${nextChunk.length}"
-    );
+    _logger.d("UPLOADING NEXT FILE CHUNK\n=> Chunk size: ${nextChunk.length}");
     final startTime = DateTime.now();
     final serverOffset = await _client
         .uploadNextChunkOfFile(
@@ -245,9 +252,7 @@ class TusFileUploader {
         );
     final endTime = DateTime.now();
     final diff = endTime.difference(startTime);
-    _logger.d(
-        "UPLOADING HAS TAKEN\n=> Time: ${diff.inMilliseconds}"
-    );
+    _logger.d("UPLOADING HAS TAKEN\n=> Time: ${diff.inMilliseconds}");
     final potential = (_currentChunkSize * (_optimalChunkSendTime / diff.inMilliseconds)).toInt();
     _currentChunkSize = max(potential, _minChunkSize);
     final nextOffset = offset + bytesRead;

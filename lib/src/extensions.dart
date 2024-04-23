@@ -15,6 +15,9 @@ extension HttpUtils on http.Client {
     Map<String, String> headers = const {},
   }) async {
     final response = await post(baseUrl, headers: headers);
+    if (response.statusCode == 401) {
+      throw UnauthorizedException(message: response.body);
+    }
     if (!(response.statusCode >= 200 && response.statusCode < 300) && response.statusCode != 404) {
       throw ProtocolException(response.statusCode);
     }
