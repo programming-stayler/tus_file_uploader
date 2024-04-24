@@ -10,11 +10,13 @@ import "package:path/path.dart" as p;
 import 'exceptions.dart';
 
 extension HttpUtils on http.Client {
-  Future<Uri> setupUploadUrl({
-    required Uri baseUrl,
+  Future<String> setupUploadUrl({
+    required String baseUrl,
+    Duration timeout = const Duration(seconds: 3),
     Map<String, String> headers = const {},
   }) async {
-    final response = await post(baseUrl, headers: headers);
+    final uri = Uri.parse(baseUrl);
+    final response = await post(uri, headers: headers).timeout(timeout);
     if (response.statusCode == 401) {
       throw UnauthorizedException(message: response.body);
     }
@@ -25,16 +27,16 @@ extension HttpUtils on http.Client {
     if (urlStr.isEmpty) {
       throw MissingUploadUriException();
     }
-    return baseUrl.parseUrl(urlStr);
+    return uri.parseUrl(urlStr).toString();
   }
 
   Future<int> getCurrentOffset(
-    Uri uploadUrl, {
+    String uploadUrl, {
     Map<String, String>? headers,
   }) async {
     final offsetHeaders = Map<String, String>.from(headers ?? {});
     final response = await head(
-      uploadUrl,
+      Uri.parse(uploadUrl),
       headers: offsetHeaders,
     );
     if (response.statusCode == 401) {
@@ -51,12 +53,12 @@ extension HttpUtils on http.Client {
   }
 
   Future<int> uploadNextChunkOfFile({
-    required Uri uploadUrl,
+    required String uploadUrl,
     required Uint8List nextChunk,
     Map<String, String> headers = const {},
   }) async {
     final response = await patch(
-      uploadUrl,
+      Uri.parse(uploadUrl),
       body: nextChunk,
       headers: headers,
     );
@@ -106,7 +108,7 @@ extension UriTus on Uri {
   Uri parseUrl(String urlStr) {
     String resultUrlStr = urlStr;
     if (urlStr.contains(",")) {
-      resultUrlStr = urlStr.substring(0, urlStr.indexOf(","));
+      resultUrlStr = urlStr.split(",")[0];
     }
     Uri uploadUrl = Uri.parse(resultUrlStr);
     if (uploadUrl.host.isEmpty) {

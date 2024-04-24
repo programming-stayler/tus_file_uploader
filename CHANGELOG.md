@@ -1,3 +1,7 @@
+## 0.0.18
+
+Introduced handling uniqueness of uploading file over generated id  
+
 ## 0.0.17
 
 Fixed handling 401 error.

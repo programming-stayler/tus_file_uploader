@@ -107,7 +107,7 @@ class _AppState extends State<App> {
       for (final path in files.keys) {
         if (files[path] == 0) {
           uploadingManager.uploadFile(
-            localFilePath: path,
+            uploadingModel: UploadingModel(path: path),
             completeCallback: onUploadingComplete,
             progressCallback: onUploadingProgress,
             failureCallback: onUploadingFailed,
@@ -131,21 +131,21 @@ class _AppState extends State<App> {
     });
   }
 
-  Future<void> onUploadingProgress(String filePath, double progress) async {
+  Future<void> onUploadingProgress(UploadingModel model, double progress) async {
     setState(() {
-      files[filePath] = progress;
+      files[model.path] = progress;
     });
   }
 
-  Future<void> onUploadingComplete(String filePath, String url) async {
+  Future<void> onUploadingComplete(UploadingModel model, String url) async {
     setState(() {
       updateUploadingStatus();
     });
   }
 
-  Future<void> onUploadingFailed(String filePath, String message) async {
+  Future<void> onUploadingFailed(UploadingModel model, String message) async {
     setState(() {
-      files[filePath] = 0;
+      files[model.path] = 0;
       updateUploadingStatus();
     });
   }

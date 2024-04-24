@@ -1,13 +1,14 @@
 import 'extensions.dart';
 import 'file_uploader.dart';
 import 'utils.dart';
+import 'uploading_model.dart';
 
 import 'package:cross_file/cross_file.dart' show XFile;
 
 class TusFileUploaderManager {
   final String baseUrl;
   final int? timeout;
-  final _cache = <String, TusFileUploader>{};
+  final _cache = <int, TusFileUploader>{};
 
   TusFileUploaderManager(
     this.baseUrl, {
@@ -15,8 +16,7 @@ class TusFileUploaderManager {
   });
 
   Future<void> uploadFile({
-    required String localFilePath,
-    String? customScheme,
+    required UploadingModel uploadingModel,
     UploadingProgressCallback? progressCallback,
     UploadingCompleteCallback? completeCallback,
     UploadingFailedCallback? failureCallback,
@@ -25,8 +25,8 @@ class TusFileUploaderManager {
     Map<String, String> headers = const {},
     bool failOnLostConnection = false,
   }) async {
-    final xFile = XFile(localFilePath);
-    TusFileUploader? uploader = _cache[localFilePath];
+    final xFile = XFile(uploadingModel.path);
+    TusFileUploader? uploader = _cache[uploadingModel.id];
     String? uploadUrl;
     if (uploader == null) {
       final totalBytes = await xFile.length();
@@ -37,27 +37,27 @@ class TusFileUploaderManager {
           "Upload-Metadata": uploadMetadata,
           "Upload-Length": "$totalBytes",
         });
-      uploader = TusFileUploader.init(
-        path: localFilePath,
-        baseUrl: Uri.parse(baseUrl + (customScheme ?? '')),
+      uploader = TusFileUploader(
+        uploadingModel: uploadingModel,
+        baseUrl: baseUrl,
         headers: resultHeaders,
         timeout: timeout,
         failOnLostConnection: failOnLostConnection,
         progressCallback: progressCallback,
-        completeCallback: (filePath, uploadUrl) async {
-          completeCallback?.call(filePath, uploadUrl);
-          _removeFileWithPath(localFilePath);
+        completeCallback: (uploadingModel, uploadUrl) async {
+          completeCallback?.call(uploadingModel, uploadUrl);
+          _removeFileWithPath(uploadingModel.id);
         },
-        failureCallback: (filePath, message) async {
-          failureCallback?.call(filePath, message);
-          _removeFileWithPath(localFilePath);
+        failureCallback: (uploadingModel, message) async {
+          failureCallback?.call(uploadingModel, message);
+          _removeFileWithPath(uploadingModel.id);
         },
-        authCallback: (filePath, message) async {
-          authCallback?.call(filePath, message);
-          _removeFileWithPath(localFilePath);
+        authCallback: (uploadingModel, message) async {
+          authCallback?.call(uploadingModel, message);
+          _removeFileWithPath(uploadingModel.id);
         }
       );
-      _cache[localFilePath] = uploader;
+      _cache[uploadingModel.id] = uploader;
       uploadUrl = await uploader.setupUploadUrl();
     }
     if (uploadUrl != null) {
@@ -79,7 +79,7 @@ class TusFileUploaderManager {
     }
   }
 
-  Future<void> _removeFileWithPath(String path) async {
-    _cache.remove(path);
+  Future<void> _removeFileWithPath(int id) async {
+    _cache.remove(id);
   }
 }

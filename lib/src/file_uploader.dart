@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'package:async/async.dart';
@@ -6,6 +7,7 @@ import 'package:cross_file/cross_file.dart' show XFile;
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 
+import 'uploading_model.dart';
 import 'utils.dart';
 import 'exceptions.dart';
 import 'extensions.dart';
@@ -16,15 +18,16 @@ class TusFileUploader {
   static const _minChunkSize = 1 * _kb;
   final _client = http.Client();
 
-  Uri? _uploadUrl;
-  String? customScheme;
+  final UploadingModel _uploadingModel;
+
+  String? get _uploadUrl => _uploadingModel.uploadUrl;
   CancelableOperation? _currentOperation;
 
-  late XFile _file;
-  late Duration _timeout;
-  late int _currentChunkSize;
-  late int _optimalChunkSendTime;
-  late Logger _logger;
+  final XFile _file;
+  final Duration _timeout;
+  int _currentChunkSize;
+  final int _optimalChunkSendTime;
+  final Logger _logger;
 
   final UploadingProgressCallback? progressCallback;
   final UploadingCompleteCallback? completeCallback;
@@ -32,124 +35,61 @@ class TusFileUploader {
   final UploadingFailedCallback? authCallback;
   final Map<String, String> headers;
   final bool failOnLostConnection;
-  final Uri baseUrl;
+  final String baseUrl;
 
   bool uploadingIsPaused = false;
 
-  TusFileUploader._({
-    required String path,
+  TusFileUploader({
+    required UploadingModel uploadingModel,
     required this.baseUrl,
     required this.headers,
     required this.failOnLostConnection,
-    required Level loggerLevel,
+    Level loggerLevel = Level.off,
     this.progressCallback,
     this.completeCallback,
     this.failureCallback,
     this.authCallback,
     int? optimalChunkSendTime,
-    Uri? uploadUrl,
     int? timeout,
-  }) {
-    _file = XFile(path);
-    _uploadUrl = uploadUrl;
-    _currentChunkSize = _defaultChunkSize;
-    _timeout = Duration(seconds: timeout ?? 3); // 3 SEC
-    _optimalChunkSendTime = optimalChunkSendTime ?? 1000; // 1 SEC
-    _logger = Logger(
-      level: loggerLevel,
-      printer: PrettyPrinter(
-        methodCount: 0,
-      ),
-    );
+  })  : _uploadingModel = uploadingModel,
+        _currentChunkSize = _defaultChunkSize,
+        _file = XFile(uploadingModel.path),
+        _timeout = Duration(seconds: timeout ?? 3),
+        _optimalChunkSendTime = optimalChunkSendTime ?? 1000,
+        _logger = Logger(
+          level: loggerLevel,
+          printer: PrettyPrinter(
+            methodCount: 0,
+          ),
+        ) {
     _logger.d(
-      "INIT FILE UPLOADER\n=> File path: $path\n=> Upload url: $uploadUrl\n=> Timeout: $_timeout\n=> OCHST: $_optimalChunkSendTime\n=> Headers: $headers",
+      "INIT FILE UPLOADER\n=> File path: ${uploadingModel.path}\n=> Upload url: ${uploadingModel.uploadUrl}\n=> Timeout: $_timeout\n=> OCHST: $_optimalChunkSendTime\n=> Headers: $headers",
     );
   }
 
-  factory TusFileUploader.init({
-    required String path,
-    required Uri baseUrl,
-    UploadingProgressCallback? progressCallback,
-    UploadingCompleteCallback? completeCallback,
-    UploadingFailedCallback? failureCallback,
-    UploadingFailedCallback? authCallback,
-    Map<String, String>? headers,
-    bool? failOnLostConnection,
-    int? optimalChunkSendTime,
-    int? timeout,
-    Level loggerLevel = Level.off,
-  }) =>
-      TusFileUploader._(
-        path: path,
-        baseUrl: baseUrl,
-        progressCallback: progressCallback,
-        completeCallback: completeCallback,
-        failureCallback: failureCallback,
-        authCallback: authCallback,
-        headers: headers ?? const {},
-        failOnLostConnection: failOnLostConnection ?? false,
-        optimalChunkSendTime: optimalChunkSendTime,
-        timeout: timeout,
-        loggerLevel: loggerLevel,
-      );
-
-  factory TusFileUploader.initAndSetup({
-    required String path,
-    required Uri baseUrl,
-    required Uri uploadUrl,
-    UploadingProgressCallback? progressCallback,
-    UploadingCompleteCallback? completeCallback,
-    UploadingFailedCallback? failureCallback,
-    UploadingFailedCallback? authCallback,
-    Map<String, String>? headers,
-    bool? failOnLostConnection,
-    int? optimalChunkSendTime,
-    int? timeout,
-    Level loggerLevel = Level.off,
-  }) =>
-      TusFileUploader._(
-        path: path,
-        baseUrl: baseUrl,
-        progressCallback: progressCallback,
-        completeCallback: completeCallback,
-        failureCallback: failureCallback,
-        authCallback: authCallback,
-        headers: headers ?? const {},
-        failOnLostConnection: failOnLostConnection ?? false,
-        optimalChunkSendTime: optimalChunkSendTime,
-        uploadUrl: uploadUrl,
-        timeout: timeout,
-        loggerLevel: loggerLevel,
-      );
-
   Future<String?> setupUploadUrl() async {
     if (_uploadUrl != null) {
-      return _uploadUrl!.toString();
+      return _uploadUrl!;
     }
     try {
-      _currentOperation = CancelableOperation.fromFuture(
-        _client
-            .setupUploadUrl(
-              baseUrl: baseUrl,
-              headers: headers,
-            )
-            .timeout(
-              _timeout,
-              onTimeout: () => baseUrl,
-            ),
+      _currentOperation = CancelableOperation<String>.fromFuture(
+        _client.setupUploadUrl(
+          baseUrl: baseUrl + (_uploadingModel.customScheme ?? ''),
+          headers: headers,
+        ),
       );
-      _uploadUrl = await _currentOperation!.value;
+      _uploadingModel.uploadUrl = await _currentOperation!.value;
       _logger.d(
         "SETUP UPLOAD URL\n=> Url: $_uploadUrl",
       );
-      return _uploadUrl.toString();
+      return _uploadUrl;
     } on UnauthorizedException catch (e) {
       _logger.e("$e");
-      await authCallback?.call(_file.path, e.toString());
+      await authCallback?.call(_uploadingModel, e.toString());
       return null;
     } catch (e) {
       _logger.e("$e");
-      await failureCallback?.call(_file.path, e.toString());
+      await failureCallback?.call(_uploadingModel, e.toString());
       return null;
     }
   }
@@ -166,13 +106,13 @@ class TusFileUploader {
     uploadingIsPaused = false;
     _currentOperation = CancelableOperation.fromFuture(() async {
       try {
-        final resultUrl = _uploadUrl;
-        if (resultUrl == null) {
+        final uploadUrl = _uploadUrl;
+        if (uploadUrl == null) {
           throw UnimplementedError('The upload url is missing');
         }
         final offset = await _client
             .getCurrentOffset(
-              resultUrl,
+              uploadUrl,
               headers: Map.from(headers)
                 ..addAll({
                   "Tus-Resumable": tusVersion,
@@ -180,7 +120,7 @@ class TusFileUploader {
             )
             .timeout(
               _timeout,
-              onTimeout: () => 0,
+              onTimeout: () => throw TimeoutException("Get current offset timeout"),
             );
         _logger.d(
           "GET CURRENT OFFSET\n=> Offset: $offset",
@@ -188,6 +128,7 @@ class TusFileUploader {
         final totalBytes = await _file.length();
         await _uploadNextChunk(
           offset: offset,
+          uploadUrl: uploadUrl,
           totalBytes: totalBytes,
           headers: headers,
         );
@@ -202,19 +143,19 @@ class TusFileUploader {
         // Lost internet connection
         _logger.e("$e");
         if (failOnLostConnection) {
-          await failureCallback?.call(_file.path, e.toString());
+          await failureCallback?.call(_uploadingModel, e.toString());
         }
         return;
       } on SocketException catch (e) {
         // Lost internet connection
         _logger.e("$e");
         if (failOnLostConnection) {
-          await failureCallback?.call(_file.path, e.toString());
+          await failureCallback?.call(_uploadingModel, e.toString());
         }
         return;
       } catch (e) {
         _logger.e("$e");
-        await failureCallback?.call(_file.path, e.toString());
+        await failureCallback?.call(_uploadingModel, e.toString());
         return;
       }
     }.call());
@@ -224,12 +165,9 @@ class TusFileUploader {
   Future<void> _uploadNextChunk({
     required int offset,
     required int totalBytes,
+    required String uploadUrl,
     Map<String, String> headers = const {},
   }) async {
-    final resultUrl = _uploadUrl;
-    if (resultUrl == null) {
-      throw UnimplementedError('The upload url is missing');
-    }
     final byteBuilder = await _file.getData(_currentChunkSize, offset: offset);
     final bytesRead = min(_currentChunkSize, byteBuilder.length);
     final nextChunk = byteBuilder.takeBytes();
@@ -237,7 +175,7 @@ class TusFileUploader {
     final startTime = DateTime.now();
     final serverOffset = await _client
         .uploadNextChunkOfFile(
-          uploadUrl: resultUrl,
+          uploadUrl: uploadUrl,
           nextChunk: nextChunk,
           headers: Map.from(headers)
             ..addAll({
@@ -262,9 +200,9 @@ class TusFileUploader {
             "response contains different Upload-Offset value ($serverOffset) than expected ($offset)",
       );
     }
-    await progressCallback?.call(_file.path, nextOffset / totalBytes);
+    await progressCallback?.call(_uploadingModel, nextOffset / totalBytes);
     if (nextOffset >= totalBytes) {
-      await completeCallback?.call(_file.path, _uploadUrl.toString());
+      await completeCallback?.call(_uploadingModel, _uploadUrl.toString());
       return;
     }
     if (uploadingIsPaused) {
@@ -272,6 +210,7 @@ class TusFileUploader {
     } else {
       await _uploadNextChunk(
         offset: nextOffset,
+        uploadUrl: uploadUrl,
         totalBytes: totalBytes,
         headers: headers,
       );
