@@ -73,10 +73,16 @@ class TusFileUploader {
     }
     try {
       _currentOperation = CancelableOperation<String>.fromFuture(
-        _client.setupUploadUrl(
-          baseUrl: baseUrl + (_uploadingModel.customScheme ?? ''),
-          headers: headers,
-        ),
+        _client
+            .setupUploadUrl(
+              baseUrl: baseUrl + (_uploadingModel.customScheme ?? ''),
+              headers: headers,
+              timeout: _timeout,
+            )
+            .timeout(
+              _timeout,
+              onTimeout: () => throw TimeoutException("Get current offset timeout"),
+            ),
       );
       _uploadingModel.uploadUrl = await _currentOperation!.value;
       _logger.d(
@@ -134,10 +140,7 @@ class TusFileUploader {
         );
       } on MissingUploadOffsetException catch (e) {
         _logger.e("$e");
-        final uploadUrl = await setupUploadUrl();
-        if (uploadUrl != null) {
-          await upload(headers: headers);
-        }
+        await failureCallback?.call(_uploadingModel, e.toString());
         return;
       } on http.ClientException catch (e) {
         // Lost internet connection

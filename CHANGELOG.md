@@ -1,3 +1,7 @@
+## 0.0.19
+
+Fixed setting timeout for setup request
+
 ## 0.0.18
 
 Introduced handling uniqueness of uploading file over generated id  
