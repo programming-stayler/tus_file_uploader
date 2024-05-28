@@ -31,7 +31,7 @@ class UploadingModel {
     return UploadingModel(
       id: map['id'] as int,
       path: map['path'] as String,
-      customScheme: map['customScheme'] as String,
+      customScheme: map['customScheme'] as String?,
       uploadUrl: map['uploadUrl'] as String?,
       compressedPath: map['compressedPath'] as String?,
     );

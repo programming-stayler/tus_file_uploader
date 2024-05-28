@@ -1,3 +1,7 @@
+## 0.0.22
+
+Fixed mapping custom scheme
+
 ## 0.0.21
 
 Fixed mapping file path
