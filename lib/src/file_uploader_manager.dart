@@ -25,7 +25,7 @@ class TusFileUploaderManager {
     Map<String, String> headers = const {},
     bool failOnLostConnection = false,
   }) async {
-    final xFile = XFile(uploadingModel.path);
+    final xFile = XFile(uploadingModel.resultPath);
     TusFileUploader? uploader = _cache[uploadingModel.id];
     String? uploadUrl;
     if (uploader == null) {

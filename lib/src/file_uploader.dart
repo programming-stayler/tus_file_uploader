@@ -53,7 +53,7 @@ class TusFileUploader {
     int? timeout,
   })  : _uploadingModel = uploadingModel,
         _currentChunkSize = _defaultChunkSize,
-        _file = XFile(uploadingModel.path),
+        _file = XFile(uploadingModel.resultPath),
         _timeout = Duration(seconds: timeout ?? 3),
         _optimalChunkSendTime = optimalChunkSendTime ?? 1000,
         _logger = Logger(
@@ -63,7 +63,7 @@ class TusFileUploader {
           ),
         ) {
     _logger.d(
-      "INIT FILE UPLOADER\n=> File path: ${uploadingModel.path}\n=> Upload url: ${uploadingModel.uploadUrl}\n=> Timeout: $_timeout\n=> OCHST: $_optimalChunkSendTime\n=> Headers: $headers",
+      "INIT FILE UPLOADER\n=> File path: ${uploadingModel.resultPath}\n=> Upload url: ${uploadingModel.uploadUrl}\n=> Timeout: $_timeout\n=> OCHST: $_optimalChunkSendTime\n=> Headers: $headers",
     );
   }
 

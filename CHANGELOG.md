@@ -1,3 +1,11 @@
+## 0.0.21
+
+Fixed mapping file path
+
+## 0.0.20
+
+Added option of storing compressed file path
+
 ## 0.0.19
 
 Fixed setting timeout for setup request
