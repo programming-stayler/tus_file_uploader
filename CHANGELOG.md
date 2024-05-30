@@ -1,3 +1,7 @@
+## 0.0.23
+
+Updated default chunk size
+
 ## 0.0.22
 
 Fixed mapping custom scheme

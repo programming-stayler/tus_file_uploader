@@ -14,7 +14,7 @@ import 'extensions.dart';
 
 class TusFileUploader {
   static const _kb = 1024; // ! KB
-  static const _defaultChunkSize = 128 * _kb; // 128 KB
+  static const _defaultChunkSize = 16 * _kb; // 16 KB
   static const _minChunkSize = 1 * _kb;
   final _client = http.Client();
 
