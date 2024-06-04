@@ -33,6 +33,7 @@ class TusFileUploader {
   final UploadingCompleteCallback? completeCallback;
   final UploadingFailedCallback? failureCallback;
   final UploadingFailedCallback? authCallback;
+  final UploadingFailedCallback? serverErrorCallback;
   final Map<String, String> headers;
   final bool failOnLostConnection;
   final String baseUrl;
@@ -48,6 +49,7 @@ class TusFileUploader {
     this.progressCallback,
     this.completeCallback,
     this.failureCallback,
+    this.serverErrorCallback,
     this.authCallback,
     int? optimalChunkSendTime,
     int? timeout,
@@ -92,6 +94,10 @@ class TusFileUploader {
     } on UnauthorizedException catch (e) {
       _logger.e("$e");
       await authCallback?.call(_uploadingModel, e.toString());
+      return null;
+    } on InternalServerErrorException catch (e) {
+      _logger.e("$e");
+      await serverErrorCallback?.call(_uploadingModel, e.toString());
       return null;
     } catch (e) {
       _logger.e("$e");
@@ -138,6 +144,10 @@ class TusFileUploader {
           totalBytes: totalBytes,
           headers: headers,
         );
+      } on InternalServerErrorException catch (e) {
+        _logger.e("$e");
+        await serverErrorCallback?.call(_uploadingModel, e.toString());
+        return null;
       } on MissingUploadOffsetException catch (e) {
         _logger.e("$e");
         await failureCallback?.call(_uploadingModel, e.toString());
