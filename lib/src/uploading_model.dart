@@ -4,9 +4,8 @@ import 'package:flutter/foundation.dart';
 
 class UploadingModel {
   final int id;
-  final String path;
+  String path;
   final String? customScheme;
-  String? compressedPath;
   String? uploadUrl;
 
   UploadingModel({
@@ -14,7 +13,6 @@ class UploadingModel {
     this.customScheme,
     int? id,
     this.uploadUrl,
-    this.compressedPath,
   }) : id = id ?? UniqueKey().hashCode;
 
   Map<String, dynamic> toJson() {
@@ -22,7 +20,6 @@ class UploadingModel {
       'id': id,
       'path': path,
       'customScheme': customScheme,
-      'compressedPath': compressedPath,
       'uploadUrl': uploadUrl,
     };
   }
@@ -33,7 +30,6 @@ class UploadingModel {
       path: map['path'] as String,
       customScheme: map['customScheme'] as String?,
       uploadUrl: map['uploadUrl'] as String?,
-      compressedPath: map['compressedPath'] as String?,
     );
   }
 
@@ -48,11 +44,10 @@ class UploadingModel {
   }
 
   @override
-  int get hashCode => resultPath.hashCode ^ customScheme.hashCode;
+  int get hashCode => path.hashCode ^ customScheme.hashCode;
 
-  bool get existsSync => File(resultPath).existsSync();
+  bool get existsSync => File(path).existsSync();
 
-  Future<bool> get exists async => File(resultPath).exists();
+  Future<bool> get exists async => File(path).exists();
 
-  String get resultPath => compressedPath ?? path;
 }
