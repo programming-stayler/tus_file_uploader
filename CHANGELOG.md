@@ -1,3 +1,7 @@
+## 0.0.24
+
+Added handling internal serve error
+
 ## 0.0.23
 
 Updated default chunk size

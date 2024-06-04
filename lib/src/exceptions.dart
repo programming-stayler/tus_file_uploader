@@ -42,3 +42,16 @@ class UnauthorizedException implements Exception {
   @override
   String toString() => 'UnauthorizedException: ${message ?? "Failed to authorize"}';
 }
+
+class InternalServerErrorException implements Exception {
+  final String? message;
+
+  InternalServerErrorException({
+    this.message,
+  });
+
+  @override
+  String toString() => 'InternalServerErrorException: ${message ?? ""}';
+}
+
+

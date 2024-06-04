@@ -23,6 +23,9 @@ extension HttpUtils on http.Client {
     if (!(response.statusCode >= 200 && response.statusCode < 300) && response.statusCode != 404) {
       throw ProtocolException(response.statusCode);
     }
+    if (response.statusCode >= 500 && response.statusCode < 600) {
+      throw InternalServerErrorException(message: response.body);
+    }
     final urlStr = response.headers["location"] ?? "";
     if (urlStr.isEmpty) {
       throw MissingUploadUriException();
@@ -45,6 +48,9 @@ extension HttpUtils on http.Client {
     if (!(response.statusCode >= 200 && response.statusCode < 300)) {
       throw ProtocolException(response.statusCode);
     }
+    if (response.statusCode >= 500 && response.statusCode < 600) {
+      throw InternalServerErrorException(message: response.body);
+    }
     final serverOffset = response.headers["upload-offset"]?.parseOffset();
     if (serverOffset == null) {
       throw MissingUploadOffsetException();
@@ -64,6 +70,9 @@ extension HttpUtils on http.Client {
     );
     if (!(response.statusCode >= 200 && response.statusCode < 300)) {
       throw ProtocolException(response.statusCode);
+    }
+    if (response.statusCode >= 500 && response.statusCode < 600) {
+      throw InternalServerErrorException(message: response.body);
     }
     final serverOffset = response.headers["upload-offset"]?.parseOffset();
     if (serverOffset == null) {
