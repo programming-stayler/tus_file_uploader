@@ -1,11 +1,15 @@
 class ProtocolException implements Exception {
   final int statusCode;
+  final String? message;
 
-  ProtocolException(this.statusCode);
+  ProtocolException(
+    this.statusCode, {
+    this.message,
+  });
 
   @override
   String toString() =>
-      'ProtocolException: unexpected status code ($statusCode) while uploading chunk';
+      'ProtocolException: unexpected status code ($statusCode) while uploading chunk\n$message';
 }
 
 class MissingUploadOffsetException implements Exception {
@@ -53,5 +57,3 @@ class InternalServerErrorException implements Exception {
   @override
   String toString() => 'InternalServerErrorException: ${message ?? ""}';
 }
-
-

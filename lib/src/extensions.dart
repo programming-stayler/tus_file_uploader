@@ -20,8 +20,8 @@ extension HttpUtils on http.Client {
     if (response.statusCode == 401) {
       throw UnauthorizedException(message: response.body);
     }
-    if (!(response.statusCode >= 200 && response.statusCode < 300) && response.statusCode != 404) {
-      throw ProtocolException(response.statusCode);
+    if (!(response.statusCode >= 200 && response.statusCode < 300)) {
+      throw ProtocolException(response.statusCode, message: response.body);
     }
     if (response.statusCode >= 500 && response.statusCode < 600) {
       throw InternalServerErrorException(message: response.body);
@@ -46,7 +46,7 @@ extension HttpUtils on http.Client {
       throw UnauthorizedException(message: response.body);
     }
     if (!(response.statusCode >= 200 && response.statusCode < 300)) {
-      throw ProtocolException(response.statusCode);
+      throw ProtocolException(response.statusCode, message: response.body);
     }
     if (response.statusCode >= 500 && response.statusCode < 600) {
       throw InternalServerErrorException(message: response.body);
@@ -69,7 +69,7 @@ extension HttpUtils on http.Client {
       headers: headers,
     );
     if (!(response.statusCode >= 200 && response.statusCode < 300)) {
-      throw ProtocolException(response.statusCode);
+      throw ProtocolException(response.statusCode, message: response.body);
     }
     if (response.statusCode >= 500 && response.statusCode < 600) {
       throw InternalServerErrorException(message: response.body);

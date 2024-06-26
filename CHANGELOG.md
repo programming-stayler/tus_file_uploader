@@ -1,3 +1,7 @@
+## 0.0.25
+
+Added logging the error message to ProtocolException
+
 ## 0.0.24
 
 Added handling internal serve error
